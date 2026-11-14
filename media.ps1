@@ -34,19 +34,27 @@ if (-not $mgr) { Write-Output '{"error":"NO_SMTC"}'; exit 1 }
 
 function Read-Thumbnail($props) {
   try {
-    if (-not $props -or -not $props.Thumbnail) { return $null }
+    if (-not $props) { [Console]::Error.WriteLine('INFO portada: sin propiedades'); return $null }
+    if (-not $props.Thumbnail) { [Console]::Error.WriteLine('INFO portada: el reproductor no publica portada'); return $null }
     $ras = Await ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
-    if (-not $ras) { return $null }
-    $size = [uint32]$ras.Size
-    if ($size -eq 0) { return $null }
-    $dr = [Windows.Storage.Streams.DataReader]::new($ras.GetInputStreamAt(0))
-    $null = Await ($dr.LoadAsync($size)) ([uint32])
-    # ReadBytes no devuelve los datos a PowerShell (llega todo a ceros): se lee como búfer.
-    $buf = $dr.ReadBuffer($size)
-    $bytes = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]::ToArray($buf)
-    [Console]::Error.WriteLine('INFO: portada ' + $bytes.Length + ' bytes, cabecera ' + ('{0:X2}{1:X2}' -f $bytes[0], $bytes[1]))
-    $dr.Dispose(); $ras.Dispose()
-    return 'data:image/jpeg;base64,' + [Convert]::ToBase64String($bytes)
+    if (-not $ras) { [Console]::Error.WriteLine('INFO portada: no se pudo abrir'); return $null }
+    # Se lee a trozos sin fiarse de .Size (en PowerShell a veces llega vacío).
+    $dr = [Windows.Storage.Streams.DataReader]::new($ras)
+    $ms = New-Object System.IO.MemoryStream
+    while ($true) {
+      $n = Await ($dr.LoadAsync([uint32]65536)) ([uint32])
+      if (-not $n -or $n -eq 0) { break }
+      $buf = $dr.ReadBuffer([uint32]$n)
+      $chunk = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]::ToArray($buf)
+      $ms.Write($chunk, 0, $chunk.Length)
+      if ($ms.Length -gt 8MB) { break }
+    }
+    $bytes = $ms.ToArray()
+    $dr.Dispose(); $ms.Dispose()
+    [Console]::Error.WriteLine('INFO portada: ' + $bytes.Length + ' bytes')
+    if ($bytes.Length -lt 16) { return $null }
+    $mime = if ($bytes[0] -eq 0x89) { 'image/png' } else { 'image/jpeg' }
+    return "data:$mime;base64," + [Convert]::ToBase64String($bytes)
   } catch {
     [Console]::Error.WriteLine('ERROR portada: ' + $_.Exception.Message)
     return $null

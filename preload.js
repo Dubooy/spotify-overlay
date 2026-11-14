@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('isla', {
   onState: (fn) => ipcRenderer.on('media:state', (_e, s) => fn(s)),
   onArt: (fn) => ipcRenderer.on('media:art', (_e, a) => fn(a)),
   onMode: (fn) => ipcRenderer.on('app:mode', (_e, m) => fn(m)),
-  onSkin: (fn) => ipcRenderer.on('app:skin', (_e, s) => fn(s))
+  onSkin: (fn) => ipcRenderer.on('app:skin', (_e, s) => fn(s)),
+  onScale: (fn) => ipcRenderer.on('app:scale', (_e, k) => fn(k))
 });

@@ -23,7 +23,7 @@ process.on('uncaughtException', (err) => {
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) app.quit();
 
-const store = new Store({ defaults: { mode: 'island', skin: 'obsidiana' } });
+const store = new Store({ defaults: { mode: 'island', skin: 'obsidiana', scale: 1.25 } });
 const DONATE_URL = 'https://ko-fi.com/'; // [PON AQUÍ TU ENLACE DE DONACIONES]
 
 // La ventana NUNCA cambia de tamaño ni se mueve: es un lienzo transparente
@@ -42,7 +42,9 @@ let lastArt = null;
 
 function windowBounds(mode) {
   const d = screen.getPrimaryDisplay();
-  const { width, height } = LAYOUT[mode];
+  const k = store.get('scale');
+  const width = Math.round(LAYOUT[mode].width * k);
+  const height = Math.round(LAYOUT[mode].height * k);
   if (mode === 'bubble') {
     const wa = d.workArea;
     return { x: wa.x + wa.width - width - 12, y: wa.y + wa.height - height - 12, width, height };
@@ -142,7 +144,7 @@ function mediaCommand(cmd) {
 ipcMain.on('media:command', (_e, cmd) => {
   if (typeof cmd === 'string' && /^(toggle|next|prev|seek \d+)$/.test(cmd)) mediaCommand(cmd);
 });
-ipcMain.handle('app:init', () => ({ mode: store.get('mode'), skin: store.get('skin'), state: lastState, art: lastArt }));
+ipcMain.handle('app:init', () => ({ mode: store.get('mode'), skin: store.get('skin'), scale: store.get('scale'), state: lastState, art: lastArt }));
 ipcMain.on('window:interactive', (_e, on) => {
   if (win && !win.isDestroyed()) win.setIgnoreMouseEvents(!on, { forward: true });
 });
@@ -169,6 +171,13 @@ function setMode(mode) {
   buildTray();
 }
 
+function setScale(k) {
+  store.set('scale', k);
+  send('app:scale', k);
+  placeWindow();
+  buildTray();
+}
+
 function setSkin(skin) {
   store.set('skin', skin);
   send('app:skin', skin);
@@ -182,6 +191,7 @@ function buildTray() {
   }
   const mode = store.get('mode');
   const skin = store.get('skin');
+  const scale = store.get('scale');
   const autoStart = app.getLoginItemSettings().openAtLogin;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Isla', enabled: false },
@@ -192,6 +202,11 @@ function buildTray() {
     { label: 'Skin', submenu: [
       { label: 'Obsidiana', type: 'radio', checked: skin === 'obsidiana', click: () => setSkin('obsidiana') },
       { label: 'Aero', type: 'radio', checked: skin === 'aero', click: () => setSkin('aero') }
+    ] },
+    { label: 'Tamaño', submenu: [
+      { label: 'Normal', type: 'radio', checked: scale === 1, click: () => setScale(1) },
+      { label: 'Grande', type: 'radio', checked: scale === 1.25, click: () => setScale(1.25) },
+      { label: 'Muy grande', type: 'radio', checked: scale === 1.5, click: () => setScale(1.5) }
     ] },
     { type: 'separator' },
     { label: 'Iniciar con Windows', type: 'checkbox', checked: autoStart, enabled: app.isPackaged,
