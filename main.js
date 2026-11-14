@@ -83,6 +83,8 @@ function createWindow() {
   win.webContents.on('console-message', (_e, level, message, line) => { if (level >= 2) log('Ventana:', message, 'línea', line); });
   win.webContents.on('render-process-gone', (_e, d) => log('Ventana caída:', d.reason));
   win.loadFile('index.html');
+  // Zoom nativo del navegador: re-renderiza todo a la resolución real (nítido), no estira una imagen.
+  win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(store.get('scale')));
   win.once('ready-to-show', () => win.showInactive());
 
   // Algunos juegos a pantalla completa le quitan el "siempre encima".
@@ -173,6 +175,7 @@ function setMode(mode) {
 
 function setScale(k) {
   store.set('scale', k);
+  if (win && !win.isDestroyed()) win.webContents.setZoomFactor(k);
   send('app:scale', k);
   placeWindow();
   buildTray();

@@ -267,7 +267,7 @@ function setMode(mode) {
   stage.classList.toggle('mode-bubble', mode === 'bubble');
   setOpen(false);
 }
-function setScale(k) { document.body.style.zoom = String(k || 1); requestAnimationFrame(updateMarquees); }
+function setScale() { requestAnimationFrame(updateMarquees); }
 function setSkin(skin) {
   stage.classList.toggle('skin-obsidiana', skin !== 'aero');
   stage.classList.toggle('skin-aero', skin === 'aero');

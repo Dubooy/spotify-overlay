@@ -7,7 +7,6 @@ html, body { width: 100%; height: 100%; background: transparent; overflow: hidde
 body {
   font-family: "Inter Isla", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
   user-select: none;
 }
 
@@ -48,7 +47,6 @@ body {
   background: var(--bg);
   color: var(--fg);
   box-shadow: var(--shadow), inset 0 0 0 1px var(--border);
-  will-change: width, height, border-radius, transform;
   --dur: 460ms;
   --ease: var(--spring-close);
   transition:
@@ -61,15 +59,15 @@ body {
 #island.is-open { --dur: 600ms; --ease: var(--spring-open); }
 
 /* Isla: arriba, centrada; crece hacia abajo desde el centro (medidas de la Dynamic Island) */
-.mode-island #island { top: 10px; left: 50%; transform: translateX(-50%); }
+.mode-island #island { top: 10px; left: 0; right: 0; margin: 0 auto; transform-origin: top center; }
 .mode-island #island.is-compact { width: 190px; height: 37px; border-radius: 18.5px; }
 .mode-island #island.is-open { width: 372px; height: 204px; border-radius: 52px; }
-.mode-island #island.is-hidden { width: 126px; height: 37px; border-radius: 18.5px; opacity: 0; transform: translateX(-50%) scale(.85); }
+.mode-island #island.is-hidden { width: 126px; height: 37px; border-radius: 18.5px; opacity: 0; transform: scale(.85); }
 .mode-island #island.bump { animation: bumpIsland 460ms var(--spring-open); }
 @keyframes bumpIsland {
-  0% { transform: translateX(-50%) scale(1); }
-  35% { transform: translateX(-50%) scale(1.05); }
-  100% { transform: translateX(-50%) scale(1); }
+  0% { transform: none; }
+  35% { transform: scale(1.05); }
+  100% { transform: none; }
 }
 
 /* Burbuja: esquina inferior derecha; crece hacia la izquierda */
@@ -105,7 +103,7 @@ body {
 #island.is-open .compact { opacity: 0; filter: blur(6px); transform: scale(1.12); }
 .mode-island #island.is-open .expanded-island,
 .mode-bubble #island.is-open .expanded-bubble {
-  opacity: 1; filter: blur(0); transform: scale(1); pointer-events: auto;
+  opacity: 1; filter: none; transform: none; pointer-events: auto;
   transition-delay: 120ms; transition-duration: 340ms, 340ms, 520ms;
   transition-timing-function: ease, ease, var(--spring-open);
 }
@@ -114,8 +112,7 @@ body {
 
 /* El contenido abierto tiene SIEMPRE su tamaño final: no se deforma mientras la isla crece */
 .expanded-island {
-  top: 0; left: 50%; width: 372px; height: 204px;
-  margin-left: -186px;
+  top: 0; left: 0; right: 0; margin: 0 auto; width: 372px; height: 204px;
   padding: 24px 24px 20px 22px;
   display: flex; flex-direction: column;
   transform-origin: top center;
@@ -143,7 +140,7 @@ body {
 
 /* Onda (ecualizador) */
 .eq { display: flex; align-items: center; gap: 2.5px; flex-shrink: 0; }
-.eq i { display: block; width: 3px; border-radius: 2px; background: var(--accent); transform: scaleY(.18); will-change: transform; transition: background-color .6s ease; }
+.eq i { display: block; width: 3px; border-radius: 2px; background: var(--accent); transform: scaleY(.18); transition: background-color .6s ease; }
 .eq-sm { height: 14px; } .eq-sm i { height: 14px; }
 .eq-lg { height: 20px; align-self: flex-start; margin-top: 8px; } .eq-lg i { height: 20px; }
 

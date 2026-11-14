@@ -38,19 +38,30 @@ function Read-Thumbnail($props) {
     if (-not $props.Thumbnail) { [Console]::Error.WriteLine('INFO portada: el reproductor no publica portada'); return $null }
     $ras = Await ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
     if (-not $ras) { [Console]::Error.WriteLine('INFO portada: no se pudo abrir'); return $null }
-    # Se lee a trozos sin fiarse de .Size (en PowerShell a veces llega vacío).
-    $dr = [Windows.Storage.Streams.DataReader]::new($ras)
+    # PowerShell no sabe convertir el objeto de Windows por sí solo: se usa reflexión,
+    # que deja que .NET haga la conversión. Dos vías, por si una falla.
     $ms = New-Object System.IO.MemoryStream
-    while ($true) {
-      $n = Await ($dr.LoadAsync([uint32]65536)) ([uint32])
-      if (-not $n -or $n -eq 0) { break }
-      $buf = $dr.ReadBuffer([uint32]$n)
-      $chunk = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]::ToArray($buf)
-      $ms.Write($chunk, 0, $chunk.Length)
-      if ($ms.Length -gt 8MB) { break }
+    try {
+      $m = [System.IO.WindowsRuntimeStreamExtensions].GetMethod('AsStreamForRead', [Type[]]@([Windows.Storage.Streams.IInputStream]))
+      $net = $m.Invoke($null, @($ras))
+      $net.CopyTo($ms)
+      $net.Dispose()
+    } catch {
+      [Console]::Error.WriteLine('INFO portada: vía 1 falló (' + $_.Exception.InnerException.Message + '), probando vía 2')
+      $ctor = [Windows.Storage.Streams.DataReader].GetConstructor([Type[]]@([Windows.Storage.Streams.IInputStream]))
+      $dr = $ctor.Invoke(@($ras))
+      while ($true) {
+        $n = Await ($dr.LoadAsync([uint32]65536)) ([uint32])
+        if (-not $n -or $n -eq 0) { break }
+        $buf = $dr.ReadBuffer([uint32]$n)
+        $chunk = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]::ToArray($buf)
+        $ms.Write($chunk, 0, $chunk.Length)
+        if ($ms.Length -gt 8MB) { break }
+      }
+      $dr.Dispose()
     }
     $bytes = $ms.ToArray()
-    $dr.Dispose(); $ms.Dispose()
+    $ms.Dispose()
     [Console]::Error.WriteLine('INFO portada: ' + $bytes.Length + ' bytes')
     if ($bytes.Length -lt 16) { return $null }
     $mime = if ($bytes[0] -eq 0x89) { 'image/png' } else { 'image/jpeg' }
