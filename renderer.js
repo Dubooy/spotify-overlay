@@ -19,6 +19,27 @@ let open = false;
 let closeTimer = null;
 let lastKey = '';
 let lastSecond = -1;
+let lastSource = '';
+
+function setText(sel, text) { $$(sel).forEach((el) => { el.firstElementChild.textContent = text; }); }
+
+// Nombre bonito del reproductor a partir del identificador de Windows
+function appName(id) {
+  const s = String(id || '').toLowerCase();
+  if (s.includes('spotify')) return 'Spotify';
+  if (s.includes('applemusic') || s.includes('apple music')) return 'Apple Music';
+  if (s.includes('chrome')) return 'Chrome';
+  if (s.includes('msedge') || s.includes('edge')) return 'Edge';
+  if (s.includes('firefox')) return 'Firefox';
+  if (s.includes('opera')) return 'Opera';
+  if (s.includes('brave')) return 'Brave';
+  if (s.includes('vlc')) return 'VLC';
+  if (s.includes('zune') || s.includes('media')) return 'Reproductor multimedia';
+  if (s.includes('deezer')) return 'Deezer';
+  if (s.includes('tidal')) return 'TIDAL';
+  if (s.includes('soundcloud')) return 'SoundCloud';
+  return 'tu PC';
+}
 
 // ---------- Utilidades ----------
 const fmt = (ms) => {
@@ -80,9 +101,17 @@ function onState(s) {
   const key = `${state.title}|${state.artist}`;
   if (key !== prevKey) {
     lastKey = key;
-    titles.forEach((el) => { el.firstElementChild.textContent = state.title || ''; });
-    artists.forEach((el) => { el.firstElementChild.textContent = state.artist || ''; });
+    const combo = [state.title, state.artist].filter(Boolean).join(' • ');
+    setText('.line-combo', combo);
+    setText('.line-title', state.title || '');
+    setText('.line-artist', state.artist || '');
     if (prevKey && state.active) bump();
+    requestAnimationFrame(updateMarquees);
+  }
+  const source = `Escuchando en ${appName(state.app)}`;
+  if (source !== lastSource) {
+    lastSource = source;
+    setText('.line-source', source);
     requestAnimationFrame(updateMarquees);
   }
   tracks.forEach((t) => t.classList.toggle('no-seek', !state.canSeek));
@@ -185,9 +214,10 @@ async function startAudioCapture() {
   } catch (e) { analyser = null; }
 }
 
-const BANDS = [[1, 3], [3, 8], [8, 18], [18, 40]];
-const levels = [0, 0, 0, 0];
-const gains = [.3, .3, .3, .3];
+const BANDS = [[1, 2], [2, 4], [4, 8], [8, 15], [15, 26], [26, 44]];
+const NB = BANDS.length;
+const levels = new Array(NB).fill(0);
+const gains = new Array(NB).fill(.3);
 
 // ---------- Bucle de animación (60 fps) ----------
 function frame(t) {
@@ -196,8 +226,8 @@ function frame(t) {
 
   // Ecualizador
   if (analyser && playing) analyser.getByteFrequencyData(freq);
-  for (let i = 0; i < 4; i++) {
-    let target = .22;
+  for (let i = 0; i < NB; i++) {
+    let target = .18;
     if (playing) {
       if (analyser) {
         const [a, b] = BANDS[i];
@@ -205,15 +235,15 @@ function frame(t) {
         for (let k = a; k < b; k++) sum += freq[k];
         const v = sum / (b - a) / 255;
         gains[i] += ((v > gains[i] ? v : gains[i] * .995) - gains[i]) * .05;
-        target = .2 + .8 * Math.min(1, v / Math.max(.08, gains[i] * 1.25));
+        target = .18 + .82 * Math.min(1, v / Math.max(.08, gains[i] * 1.25));
       } else {
-        target = .45 + .4 * Math.sin(t / (210 + i * 47) + i * 1.7) * Math.sin(t / (530 + i * 91));
+        target = .5 + .38 * Math.sin(t / (190 + i * 41) + i * 1.7) * Math.sin(t / (510 + i * 83) + i);
       }
     }
     levels[i] += (target - levels[i]) * (target > levels[i] ? .45 : .14);
   }
   for (let i = 0; i < eqBars.length; i++) {
-    eqBars[i].style.transform = `scaleY(${levels[i % 4].toFixed(3)})`;
+    eqBars[i].style.transform = `scaleY(${levels[i % NB].toFixed(3)})`;
   }
 
   // Progreso

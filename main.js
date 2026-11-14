@@ -30,7 +30,7 @@ const DONATE_URL = 'https://ko-fi.com/'; // [PON AQUÍ TU ENLACE DE DONACIONES]
 // fijo y toda la animación ocurre dentro, en CSS (a 60 fps reales). Las zonas
 // transparentes dejan pasar el ratón a lo que haya debajo.
 const LAYOUT = {
-  island: { width: 460, height: 250 },
+  island: { width: 460, height: 270 },
   bubble: { width: 470, height: 120 }
 };
 

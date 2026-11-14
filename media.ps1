@@ -24,6 +24,7 @@ $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,
 $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties,Windows.Media.Control,ContentType=WindowsRuntime]
 $null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType,Windows.Storage.Streams,ContentType=WindowsRuntime]
 $null = [Windows.Storage.Streams.IInputStream,Windows.Storage.Streams,ContentType=WindowsRuntime]
+$null = [Windows.Storage.Streams.DataReader,Windows.Storage.Streams,ContentType=WindowsRuntime]
 
 [Console]::Error.WriteLine('INFO: helper arrancado, PowerShell ' + $PSVersionTable.PSVersion)
 [Console]::Error.WriteLine('INFO: pidiendo acceso a los controles multimedia')
@@ -33,21 +34,27 @@ if (-not $mgr) { Write-Output '{"error":"NO_SMTC"}'; exit 1 }
 
 function Read-Thumbnail($props) {
   try {
-    if (-not $props.Thumbnail) { return $null }
+    if (-not $props -or -not $props.Thumbnail) { return $null }
     $ras = Await ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
     if (-not $ras) { return $null }
-    $net = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead([Windows.Storage.Streams.IInputStream]$ras)
-    $ms = New-Object System.IO.MemoryStream
-    $net.CopyTo($ms)
-    $b64 = [Convert]::ToBase64String($ms.ToArray())
-    $net.Dispose(); $ms.Dispose()
-    return 'data:image/png;base64,' + $b64
-  } catch { return $null }
+    $size = [uint32]$ras.Size
+    if ($size -eq 0) { return $null }
+    $dr = [Windows.Storage.Streams.DataReader]::new($ras.GetInputStreamAt(0))
+    $null = Await ($dr.LoadAsync($size)) ([uint32])
+    $bytes = New-Object byte[] $size
+    $dr.ReadBytes($bytes)
+    $dr.Dispose(); $ras.Dispose()
+    return 'data:image/jpeg;base64,' + [Convert]::ToBase64String($bytes)
+  } catch {
+    [Console]::Error.WriteLine('ERROR portada: ' + $_.Exception.Message)
+    return $null
+  }
 }
 
 $lastKey = ''
 $lastArt = $null
 $artId = 0
+$artRetryAt = $null
 $lastJson = ''
 $lastSent = [DateTime]::MinValue
 # OJO: [Console]::In bloquea en ReadLineAsync en PowerShell 5.1; se usa el flujo real.
@@ -84,11 +91,15 @@ while ($true) {
     $title = if ($props) { $props.Title } else { '' }
     $artist = if ($props) { $props.Artist } else { '' }
     $key = "$title|$artist"
-    if ($key -ne $lastKey) {
+    $retryArt = ($key -eq $lastKey -and $artRetryAt -and [DateTime]::UtcNow -ge $artRetryAt)
+    if ($key -ne $lastKey -or $retryArt) {
+      $artRetryAt = if ($key -ne $lastKey) { [DateTime]::UtcNow.AddSeconds(1.5) } else { $null }
       $lastKey = $key
       Start-Sleep -Milliseconds 250   # la portada llega un instante después del título
       $props = Await ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
-      $lastArt = Read-Thumbnail $props
+      $newArt = Read-Thumbnail $props
+      if (-not $newArt -and $retryArt) { $newArt = $lastArt }
+      $lastArt = $newArt
       $artId++
       $artLine = [ordered]@{ type = 'art'; artId = $artId; art = $lastArt } | ConvertTo-Json -Compress
       [Console]::Out.WriteLine($artLine)
