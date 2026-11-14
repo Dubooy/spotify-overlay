@@ -20,7 +20,8 @@ process.on('uncaughtException', (err) => {
   app.exit(1);
 });
 
-if (!app.requestSingleInstanceLock()) { app.quit(); }
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) app.quit();
 
 const store = new Store({ defaults: { mode: 'island', skin: 'obsidiana' } });
 const DONATE_URL = 'https://ko-fi.com/'; // [PON AQUÍ TU ENLACE DE DONACIONES]
@@ -203,6 +204,7 @@ function buildTray() {
 }
 
 app.whenReady().then(() => {
+  if (!gotLock) return; // ya hay otra Isla abierta
   log('Isla', app.getVersion(), 'arrancando. Empaquetada:', app.isPackaged);
   if (app.isPackaged && store.get('firstRun') !== false) {
     app.setLoginItemSettings({ openAtLogin: true });

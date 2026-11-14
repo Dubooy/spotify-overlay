@@ -26,7 +26,9 @@ $null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType,Windows.Stor
 $null = [Windows.Storage.Streams.IInputStream,Windows.Storage.Streams,ContentType=WindowsRuntime]
 
 [Console]::Error.WriteLine('INFO: helper arrancado, PowerShell ' + $PSVersionTable.PSVersion)
+[Console]::Error.WriteLine('INFO: pidiendo acceso a los controles multimedia')
 $mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
+[Console]::Error.WriteLine('INFO: controles multimedia listos: ' + [bool]$mgr)
 if (-not $mgr) { Write-Output '{"error":"NO_SMTC"}'; exit 1 }
 
 function Read-Thumbnail($props) {
@@ -48,7 +50,8 @@ $lastArt = $null
 $artId = 0
 $lastJson = ''
 $lastSent = [DateTime]::MinValue
-$reader = [Console]::In
+# OJO: [Console]::In bloquea en ReadLineAsync en PowerShell 5.1; se usa el flujo real.
+$reader = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8)
 $readTask = $reader.ReadLineAsync()
 
 while ($true) {
