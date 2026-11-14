@@ -1,0 +1,30 @@
+{
+  "name": "isla",
+  "productName": "Isla",
+  "version": "0.1.0",
+  "description": "Tu música en una isla flotante, al estilo Dynamic Island, para Windows",
+  "main": "main.js",
+  "author": "Dubooy",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.dubooy.isla",
+    "productName": "Isla",
+    "directories": { "buildResources": "build", "output": "dist" },
+    "files": ["main.js", "preload.js", "renderer.js", "index.html", "style.css", "build/tray.png", "package.json"],
+    "extraResources": [{ "from": "media.ps1", "to": "media.ps1" }],
+    "win": { "target": "nsis", "icon": "build/icon.png", "artifactName": "Isla-Setup-${version}.${ext}" },
+    "nsis": { "oneClick": true, "perMachine": false, "runAfterFinish": true, "deleteAppDataOnUninstall": false }
+  }
+}

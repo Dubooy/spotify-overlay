@@ -1,0 +1,186 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+body {
+  font-family: "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ---------- Skins ---------- */
+.skin-obsidiana {
+  --bg: #000;
+  --fg: #f5f5f7;
+  --sub: rgba(235, 235, 245, .6);
+  --track: rgba(255, 255, 255, .22);
+  --fill: #fff;
+  --border: rgba(255, 255, 255, .07);
+  --shadow: 0 12px 34px rgba(0, 0, 0, .45);
+  --gloss: 0;
+}
+.skin-aero {
+  --bg: linear-gradient(180deg, #eaf8ff 0%, #9bd6f7 47%, #3a9fdc 53%, #63c4f2 100%);
+  --fg: #06243f;
+  --sub: #1f4d75;
+  --track: rgba(255, 255, 255, .6);
+  --fill: linear-gradient(180deg, #c3f58c, #4caf2f);
+  --border: rgba(255, 255, 255, .95);
+  --shadow: 0 10px 28px rgba(20, 80, 140, .38);
+  --gloss: 1;
+}
+
+/* ---------- Curvas: apertura con rebote, cierre suave ---------- */
+:root {
+  --spring-open: cubic-bezier(.34, 1.32, .42, 1);
+  --spring-close: cubic-bezier(.32, .72, 0, 1);
+  --accent: #f5f5f7;
+}
+
+#island {
+  position: absolute;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow), inset 0 0 0 1px var(--border);
+  will-change: width, height, border-radius, transform;
+  --dur: 440ms;
+  --ease: var(--spring-close);
+  transition:
+    width var(--dur) var(--ease),
+    height var(--dur) var(--ease),
+    border-radius var(--dur) var(--ease),
+    opacity 280ms ease,
+    transform 520ms var(--spring-open);
+}
+#island.is-open { --dur: 580ms; --ease: var(--spring-open); }
+
+/* Isla: arriba, centrada; crece hacia abajo desde el centro */
+.mode-island #island { top: 8px; left: 50%; transform: translateX(-50%); }
+.mode-island #island.is-compact { width: 196px; height: 36px; border-radius: 18px; }
+.mode-island #island.is-open { width: 372px; height: 184px; border-radius: 44px; }
+.mode-island #island.is-hidden { width: 120px; height: 30px; border-radius: 15px; opacity: 0; transform: translateX(-50%) scale(.85); }
+.mode-island #island.bump { animation: bumpIsland 420ms var(--spring-open); }
+@keyframes bumpIsland {
+  0% { transform: translateX(-50%) scale(1); }
+  35% { transform: translateX(-50%) scale(1.06); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* Burbuja: esquina inferior derecha; crece hacia la izquierda */
+.mode-bubble #island { right: 16px; bottom: 16px; transform-origin: right center; }
+.mode-bubble #island.is-compact { width: 64px; height: 64px; border-radius: 32px; }
+.mode-bubble #island.is-open { width: 420px; height: 64px; border-radius: 32px; }
+.mode-bubble #island.is-hidden { width: 64px; height: 64px; border-radius: 32px; opacity: 0; transform: scale(.6); }
+.mode-bubble #island.bump { animation: bumpBubble 420ms var(--spring-open); }
+@keyframes bumpBubble { 0% { transform: scale(1); } 35% { transform: scale(1.08); } 100% { transform: scale(1); } }
+
+/* Brillo de cristal (solo Aero) */
+.gloss {
+  position: absolute; left: 6%; right: 6%; top: 3px; height: 46%;
+  border-radius: 999px 999px 45% 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, 0));
+  opacity: var(--gloss);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ---------- Capas de contenido: se cruzan con fundido + desenfoque ---------- */
+.compact, .expanded, .disc {
+  position: absolute;
+  transition: opacity 180ms ease, filter 180ms ease, transform 260ms var(--spring-close);
+  z-index: 2;
+}
+.compact {
+  inset: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px 0 6px;
+}
+.expanded { opacity: 0; filter: blur(8px); transform: scale(.94); pointer-events: none; }
+#island.is-open .compact { opacity: 0; filter: blur(6px); transform: scale(1.08); }
+.mode-island #island.is-open .expanded-island,
+.mode-bubble #island.is-open .expanded-bubble {
+  opacity: 1; filter: blur(0); transform: scale(1); pointer-events: auto;
+  transition-delay: 110ms; transition-duration: 320ms, 320ms, 480ms;
+}
+.mode-island .expanded-bubble, .mode-island .disc { display: none; }
+.mode-bubble .expanded-island, .mode-bubble .compact { display: none; }
+
+/* El contenido abierto tiene SIEMPRE su tamaño final: no se deforma mientras la isla crece */
+.expanded-island {
+  top: 0; left: 50%; width: 372px; height: 184px;
+  margin-left: -186px;
+  padding: 22px 26px 18px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  transform-origin: top center;
+}
+
+.art { display: block; object-fit: cover; background: rgba(127, 127, 127, .25); transition: opacity 260ms ease; }
+.art.loading { opacity: 0; }
+.art-sm { width: 26px; height: 26px; border-radius: 8px; }
+.art-lg { width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; }
+
+.row-top { display: flex; align-items: center; gap: 12px; }
+.meta { flex: 1; min-width: 0; }
+.title, .artist { white-space: nowrap; overflow: hidden; }
+.title { font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
+.artist { font-size: 14px; color: var(--sub); margin-top: 1px; }
+.title span, .artist span { display: inline-block; }
+.marquee span { animation: marquee var(--mq-time, 10s) ease-in-out infinite; }
+.marquee { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); }
+@keyframes marquee {
+  0%, 15% { transform: translateX(0); }
+  55%, 70% { transform: translateX(var(--mq, 0px)); }
+  100% { transform: translateX(0); }
+}
+
+/* Ecualizador */
+.eq { display: flex; align-items: center; gap: 3px; }
+.eq i { display: block; width: 3px; border-radius: 2px; background: var(--accent); transform: scaleY(.25); will-change: transform; }
+.eq-sm i { height: 16px; }
+.eq-lg { height: 24px; } .eq-lg i { height: 24px; }
+
+/* Progreso */
+.row-progress { display: flex; align-items: center; gap: 10px; }
+.t { font-size: 12px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; width: 38px; }
+.t-rem { text-align: right; }
+.track { flex: 1; height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; cursor: pointer; position: relative; }
+.track.no-seek { cursor: default; }
+.fill { position: absolute; inset: 0; background: var(--fill); transform-origin: left center; transform: scaleX(0); will-change: transform; border-radius: 3px; }
+
+/* Controles */
+.row-controls { display: flex; justify-content: center; align-items: center; gap: 46px; }
+.btn {
+  appearance: none; border: 0; background: none; color: var(--fg); cursor: pointer;
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  transition: transform 160ms var(--spring-open), background-color 160ms ease;
+}
+.btn:hover { background-color: rgba(127, 127, 127, .16); }
+.btn:active { transform: scale(.86); }
+.btn svg { width: 26px; height: 26px; fill: currentColor; grid-area: 1 / 1; }
+.btn.play svg { width: 34px; height: 34px; transition: opacity 160ms ease, transform 220ms var(--spring-open); }
+.btn.play .ic-pause, .is-playing .btn.play .ic-play { opacity: 0; transform: scale(.6); }
+.is-playing .btn.play .ic-pause { opacity: 1; transform: scale(1); }
+
+/* ---------- Burbuja ---------- */
+.disc { left: 0; top: 0; width: 64px; height: 64px; z-index: 4; }
+.ring { position: absolute; inset: 0; width: 64px; height: 64px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 3.5; }
+.ring-bg { stroke: var(--track); }
+.ring-fg { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 188.5; stroke-dashoffset: 188.5; }
+.art-disc {
+  position: absolute; left: 7px; top: 7px; width: 50px; height: 50px; border-radius: 50%;
+  animation: spin 8s linear infinite; animation-play-state: paused;
+}
+.is-playing .art-disc { animation-play-state: running; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.expanded-bubble {
+  top: 0; right: 0; width: 356px; height: 64px;
+  display: flex; align-items: center; gap: 10px; padding: 0 12px 0 14px;
+  transform-origin: left center;
+}
+.expanded-bubble .title { font-size: 15px; }
+.expanded-bubble .artist { font-size: 12.5px; }
+.expanded-bubble .row-controls { gap: 2px; }
+.expanded-bubble .btn { width: 36px; height: 36px; }
+.expanded-bubble .btn svg { width: 22px; height: 22px; }
+.expanded-bubble .btn.play svg { width: 28px; height: 28px; }

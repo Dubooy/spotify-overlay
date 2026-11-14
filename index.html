@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; media-src 'self' blob:">
+<title>Isla</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage" class="mode-island skin-obsidiana">
+    <div id="island" class="is-hidden" aria-label="Reproductor">
+      <div class="gloss" aria-hidden="true"></div>
+
+      <!-- Compacto: portada + ecualizador -->
+      <div class="compact">
+        <img class="art art-sm" alt="" draggable="false">
+        <div class="eq eq-sm" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <!-- Abierto (isla): distribución tipo Dynamic Island -->
+      <div class="expanded expanded-island">
+        <div class="row-top">
+          <img class="art art-lg" alt="" draggable="false">
+          <div class="meta">
+            <div class="title"><span>—</span></div>
+            <div class="artist"><span>—</span></div>
+          </div>
+          <div class="eq eq-lg" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="row-progress">
+          <span class="t t-el">0:00</span>
+          <div class="track"><div class="fill"></div></div>
+          <span class="t t-rem">-0:00</span>
+        </div>
+        <div class="row-controls">
+          <button class="btn prev" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M6 5h2.6v14H6zM9.4 12 19 18.6V5.4z"/></svg></button>
+          <button class="btn play" aria-label="Reproducir o pausar">
+            <svg class="ic-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4L19 12z"/></svg>
+            <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6.5 4.5h3.8v15H6.5zM13.7 4.5h3.8v15h-3.8z"/></svg>
+          </button>
+          <button class="btn next" aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M15.4 5H18v14h-2.6zM5 5.4v13.2L14.6 12z"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Abierto (burbuja): una sola fila -->
+      <div class="expanded expanded-bubble">
+        <div class="meta">
+          <div class="title"><span>—</span></div>
+          <div class="artist"><span>—</span></div>
+        </div>
+        <div class="row-controls">
+          <button class="btn prev" aria-label="Anterior"><svg viewBox="0 0 24 24"><path d="M6 5h2.6v14H6zM9.4 12 19 18.6V5.4z"/></svg></button>
+          <button class="btn play" aria-label="Reproducir o pausar">
+            <svg class="ic-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4L19 12z"/></svg>
+            <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6.5 4.5h3.8v15H6.5zM13.7 4.5h3.8v15h-3.8z"/></svg>
+          </button>
+          <button class="btn next" aria-label="Siguiente"><svg viewBox="0 0 24 24"><path d="M15.4 5H18v14h-2.6zM5 5.4v13.2L14.6 12z"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Disco de la burbuja con anillo de progreso -->
+      <div class="disc" aria-hidden="true">
+        <svg class="ring" viewBox="0 0 64 64"><circle class="ring-bg" cx="32" cy="32" r="30"/><circle class="ring-fg" cx="32" cy="32" r="30"/></svg>
+        <img class="art art-disc" alt="" draggable="false">
+      </div>
+    </div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

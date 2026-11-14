@@ -1,0 +1,38 @@
+name: Construir instalador
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Fijar versión (0.1.<nº de build>)
+        shell: bash
+        run: npm version "0.1.${{ github.run_number }}" --no-git-tag-version --allow-same-version
+
+      - name: Construir .exe
+        run: npm run dist
+
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.${{ github.run_number }}
+          name: Isla 0.1.${{ github.run_number }}
+          body: "Descarga **Isla-Setup-0.1.${{ github.run_number }}.exe**, ábrelo y listo. Generado automáticamente desde: ${{ github.event.head_commit.message }}"
+          files: dist/Isla-Setup-*.exe
+          make_latest: true
