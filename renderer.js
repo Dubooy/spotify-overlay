@@ -124,6 +124,7 @@ function onArt(a) {
     img.classList.add('loading');
     setTimeout(() => {
       img.onload = () => img.classList.remove('loading');
+      img.onerror = () => { img.removeAttribute('src'); img.classList.remove('loading'); };
       if (src) img.src = src; else { img.removeAttribute('src'); img.classList.remove('loading'); }
     }, 140);
   });

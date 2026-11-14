@@ -41,8 +41,10 @@ function Read-Thumbnail($props) {
     if ($size -eq 0) { return $null }
     $dr = [Windows.Storage.Streams.DataReader]::new($ras.GetInputStreamAt(0))
     $null = Await ($dr.LoadAsync($size)) ([uint32])
-    $bytes = New-Object byte[] $size
-    $dr.ReadBytes($bytes)
+    # ReadBytes no devuelve los datos a PowerShell (llega todo a ceros): se lee como búfer.
+    $buf = $dr.ReadBuffer($size)
+    $bytes = [System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions]::ToArray($buf)
+    [Console]::Error.WriteLine('INFO: portada ' + $bytes.Length + ' bytes, cabecera ' + ('{0:X2}{1:X2}' -f $bytes[0], $bytes[1]))
     $dr.Dispose(); $ras.Dispose()
     return 'data:image/jpeg;base64,' + [Convert]::ToBase64String($bytes)
   } catch {
