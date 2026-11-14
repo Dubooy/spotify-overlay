@@ -1,8 +1,9 @@
-# Puente con los controles multimedia de Windows (SMTC).
+﻿# Puente con los controles multimedia de Windows (SMTC).
 # Lee lo que suena en cualquier reproductor (Spotify, navegador, etc.) y
 # escribe una línea JSON por cada cambio. Recibe órdenes por stdin:
 #   toggle | next | prev | seek <ms>
-$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Continue'
+trap { [Console]::Error.WriteLine('ERROR: ' + $_.Exception.Message + ' @ ' + $_.InvocationInfo.ScriptLineNumber); continue }
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 
@@ -19,10 +20,12 @@ function Await($op, $type) {
   return $null
 }
 
-$null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
-$null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties, Windows.Media.Control, ContentType = WindowsRuntime]
-$null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType, Windows.Storage.Streams, ContentType = WindowsRuntime]
+$null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager,Windows.Media.Control,ContentType=WindowsRuntime]
+$null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties,Windows.Media.Control,ContentType=WindowsRuntime]
+$null = [Windows.Storage.Streams.IRandomAccessStreamWithContentType,Windows.Storage.Streams,ContentType=WindowsRuntime]
+$null = [Windows.Storage.Streams.IInputStream,Windows.Storage.Streams,ContentType=WindowsRuntime]
 
+[Console]::Error.WriteLine('INFO: helper arrancado, PowerShell ' + $PSVersionTable.PSVersion)
 $mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
 if (-not $mgr) { Write-Output '{"error":"NO_SMTC"}'; exit 1 }
 
@@ -31,7 +34,7 @@ function Read-Thumbnail($props) {
     if (-not $props.Thumbnail) { return $null }
     $ras = Await ($props.Thumbnail.OpenReadAsync()) ([Windows.Storage.Streams.IRandomAccessStreamWithContentType])
     if (-not $ras) { return $null }
-    $net = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($ras)
+    $net = [System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead([Windows.Storage.Streams.IInputStream]$ras)
     $ms = New-Object System.IO.MemoryStream
     $net.CopyTo($ms)
     $b64 = [Convert]::ToBase64String($ms.ToArray())
@@ -94,7 +97,7 @@ while ($true) {
       title    = $title
       artist   = $artist
       album    = if ($props) { $props.AlbumTitle } else { '' }
-      playing  = ($info.PlaybackStatus -eq 4)
+      playing  = ("$($info.PlaybackStatus)" -eq 'Playing')
       position = [int64]$tl.Position.TotalMilliseconds
       duration = [int64]$tl.EndTime.TotalMilliseconds
       updated  = [int64]$tl.LastUpdatedTime.ToUnixTimeMilliseconds()

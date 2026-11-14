@@ -3,6 +3,17 @@ const path = require('path');
 const { spawn } = require('child_process');
 const readline = require('readline');
 const Store = require('electron-store');
+const fs = require('fs');
+
+// Registro para diagnosticar problemas: %APPDATA%\\Isla\\isla.log
+let logPath = null;
+function log(...parts) {
+  try {
+    if (!logPath) logPath = path.join(app.getPath('userData'), 'isla.log');
+    const line = `[${new Date().toISOString()}] ${parts.join(' ')}\n`;
+    fs.appendFileSync(logPath, line);
+  } catch (e) { /* noop */ }
+}
 
 process.on('uncaughtException', (err) => {
   try { dialog.showErrorBox('Isla - Error inesperado', String((err && err.stack) || err)); } catch (e) { /* noop */ }
@@ -66,6 +77,8 @@ function createWindow() {
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
+  win.webContents.on('console-message', (_e, level, message, line) => { if (level >= 2) log('Ventana:', message, 'línea', line); });
+  win.webContents.on('render-process-gone', (_e, d) => log('Ventana caída:', d.reason));
   win.loadFile('index.html');
   win.once('ready-to-show', () => win.showInactive());
 
@@ -94,10 +107,18 @@ function startMedia() {
   media = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], {
     windowsHide: true
   });
+  log('Arrancando helper:', script, 'existe:', fs.existsSync(script));
+  media.on('error', (e) => log('No se pudo lanzar PowerShell:', e.message));
+  readline.createInterface({ input: media.stderr }).on('line', (l) => log('PS', l));
+  let firstLine = true;
   const rl = readline.createInterface({ input: media.stdout });
   rl.on('line', (line) => {
     let msg;
-    try { msg = JSON.parse(line); } catch (e) { return; }
+    try { msg = JSON.parse(line); } catch (e) { log('Línea no JSON:', line.slice(0, 200)); return; }
+    if (firstLine || msg.type !== 'art' && msg.title !== lastState.title) {
+      firstLine = false;
+      log('Estado:', msg.type === 'art' ? 'portada' : JSON.stringify({ ...msg, art: undefined }));
+    }
     if (msg.type === 'art') {
       lastArt = msg;
       send('media:art', msg);
@@ -106,7 +127,8 @@ function startMedia() {
       send('media:state', msg);
     }
   });
-  media.on('exit', () => {
+  media.on('exit', (code) => {
+    log('Helper terminado, código', code);
     media = null;
     if (!app.isQuitting) setTimeout(startMedia, 2000); // se reinicia solo si se cae
   });
@@ -174,12 +196,14 @@ function buildTray() {
     { label: 'Iniciar con Windows', type: 'checkbox', checked: autoStart, enabled: app.isPackaged,
       click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }) },
     { label: '♥ Apoyar el proyecto', click: () => shell.openExternal(DONATE_URL) },
+    { label: 'Ver registro (diagnóstico)', click: () => { log('Registro abierto'); shell.openPath(logPath || path.join(app.getPath('userData'), 'isla.log')); } },
     { type: 'separator' },
     { label: 'Salir', click: () => { app.isQuitting = true; app.quit(); } }
   ]));
 }
 
 app.whenReady().then(() => {
+  log('Isla', app.getVersion(), 'arrancando. Empaquetada:', app.isPackaged);
   if (app.isPackaged && store.get('firstRun') !== false) {
     app.setLoginItemSettings({ openAtLogin: true });
     store.set('firstRun', false);
